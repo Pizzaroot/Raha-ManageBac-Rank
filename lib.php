@@ -165,4 +165,78 @@ function getClasses($cookie_string) {
 	}
 	return $classes;
 }
+
+function getClassName($cookie_string, $class_id) {
+	// https://raha.managebac.com/student/classes/10611515
+	// <h3> </h3>
+	$opts = array(
+		'http'=>array(
+			'method'=>"GET",
+			'header'=>"Cookie: ".$cookie_string."\r\n"
+		)
+	);
+	$context = stream_context_create($opts);
+	$response = file_get_contents("https://raha.managebac.com/student/classes/".$class_id, false, $context);
+	$class_name = explode('</h3>', explode("<h3>", $response)[1])[0];
+	return $class_name;
+}
+
+function getTasks($cookie_string, $class_id) {
+	$opts = array(
+		'http'=>array(
+			'method'=>"GET",
+			'header'=>"Cookie: ".$cookie_string."\r\n"
+		)
+	);
+	$context = stream_context_create($opts);
+	$response = file_get_contents("https://raha.managebac.com/student/classes/".$class_id."/tasks", false, $context);
+	$tasks_arr = explode("<div class='details'>", $response);
+	$tasks = [];
+	for($i = 1; $i < count($tasks_arr); $i++) {
+		$tasks[] = explode('/', explode('"', $tasks_arr[$i])[1])[5];
+	}
+	return $tasks;
+}
+
+function getTaskNameAndGrade($cookie_string, $class_id, $task_id) {
+	$opts = array(
+		'http'=>array(
+			'method'=>"GET",
+			'header'=>"Cookie: ".$cookie_string."\r\n"
+		)
+	);
+	$context = stream_context_create($opts);
+	$response = file_get_contents("https://raha.managebac.com/student/classes/".$class_id."/tasks/".$task_id, false, $context);
+	if (strpos($response, "<div class='label label-score'>") !== false) {
+		if (strpos($response, "<div class='label label-summative'>Summative</div>") !== false) {
+			$title = explode('</h4>', explode("<h4 class='title'>", $response)[1])[0];
+			$count = 1;
+			$A = -1;
+			$B = -1;
+			$C = -1;
+			$D = -1;
+			if (strpos($response, "<li>\nA: ") !== false) {
+				$A = explode("</div>", explode("<div class='label label-score'>", $response)[$count])[0];
+				$count++;
+			}
+			if (strpos($response, "<li>\nB: ") !== false) {
+				$B = explode("</div>", explode("<div class='label label-score'>", $response)[$count])[0];
+				$count++;
+			}
+			if (strpos($response, "<li>\nC: ") !== false) {
+				$C = explode("</div>", explode("<div class='label label-score'>", $response)[$count])[0];
+				$count++;
+			}
+			if (strpos($response, "<li>\nD: ") !== false) {
+				$D = explode("</div>", explode("<div class='label label-score'>", $response)[$count])[0];
+				$count++;
+			}
+			return array($title, $A, $B, $C, $D);
+		} else {
+			return -2;
+		}
+	} else {
+		return -1;
+	}
+}
 ?>
